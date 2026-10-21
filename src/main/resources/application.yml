@@ -1,0 +1,50 @@
+spring:
+  application:
+    name: meeting-scheduler
+  datasource:
+    # File based H2 so data survives restarts. Swap the URL/driver for a server database in production.
+    url: jdbc:h2:file:./data/meeting-scheduler;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 50
+          time_zone: UTC
+        order_inserts: true
+        order_updates: true
+        default_batch_fetch_size: 100
+  flyway:
+    enabled: true
+  jackson:
+    default-property-inclusion: non_null
+  h2:
+    console:
+      enabled: false
+  mvc:
+    problemdetails:
+      enabled: true
+
+server:
+  compression:
+    enabled: true
+  tomcat:
+    threads:
+      max: 200
+
+scheduler:
+  slot:
+    min-duration-minutes: 5
+    max-duration-minutes: 480
+    max-bulk-slots: 500
+  availability:
+    max-window-days: 62
+  meeting:
+    max-participants: 100
