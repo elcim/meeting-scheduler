@@ -16,6 +16,9 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 
+/**
+ * REST endpoints for registering and viewing users.
+ */
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
@@ -26,6 +29,11 @@ public class UserController {
         this.userService = userService;
     }
 
+    /**
+     * Registers a user, which also creates the user's calendar.
+     *
+     * @param request the request body
+     */
     @PostMapping
     public ResponseEntity<UserResponse> create(@Valid @RequestBody CreateUserRequest request) {
         UserResponse user = UserResponse.from(userService.register(new RegisterUserCommand(request.name(), request.email())));
@@ -33,6 +41,11 @@ public class UserController {
         return ResponseEntity.created(location).body(user);
     }
 
+    /**
+     * Returns a user.
+     *
+     * @param userId id of the user
+     */
     @GetMapping("/{userId}")
     public UserResponse get(@PathVariable Long userId) {
         return UserResponse.from(userService.get(userId));

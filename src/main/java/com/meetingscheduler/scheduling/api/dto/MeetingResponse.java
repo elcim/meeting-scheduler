@@ -5,6 +5,9 @@ import com.meetingscheduler.scheduling.application.MeetingView;
 import java.time.Instant;
 import java.util.Set;
 
+/**
+ * Representation of a meeting, together with the time of the slot that holds it.
+ */
 public record MeetingResponse(
         Long id,
         Long slotId,

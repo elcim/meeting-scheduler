@@ -40,6 +40,12 @@ public class User {
         this.createdAt = Instant.now();
     }
 
+    /**
+     * Creates a new user.
+     *
+     * @param name display name of the user
+     * @param email the validated email address
+     */
     public static User register(String name, EmailAddress email) {
         return new User(name, email);
     }

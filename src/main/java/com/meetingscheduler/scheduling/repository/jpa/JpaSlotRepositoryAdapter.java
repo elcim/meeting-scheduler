@@ -13,6 +13,9 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * JPA adapter of {@link SlotRepository}.
+ */
 @Repository
 class JpaSlotRepositoryAdapter implements SlotRepository {
 

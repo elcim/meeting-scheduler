@@ -8,6 +8,9 @@ import org.springframework.stereotype.Repository;
 import java.util.Collection;
 import java.util.Optional;
 
+/**
+ * JPA adapter of {@link UserRepository}.
+ */
 @Repository
 class JpaUserRepositoryAdapter implements UserRepository {
 

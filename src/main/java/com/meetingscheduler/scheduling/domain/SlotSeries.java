@@ -11,6 +11,9 @@ import java.util.List;
  */
 public record SlotSeries(Instant firstStart, int slotMinutes, int gapMinutes, int count) {
 
+    /**
+     * The start time of each slot of the series.
+     */
     public List<Instant> starts() {
         List<Instant> starts = new ArrayList<>(count);
         Instant start = firstStart;
@@ -21,6 +24,9 @@ public record SlotSeries(Instant firstStart, int slotMinutes, int gapMinutes, in
         return starts;
     }
 
+    /**
+     * The end of the last slot of the series.
+     */
     public Instant end() {
         return firstStart.plus(Duration.ofMinutes((long) (slotMinutes + gapMinutes) * (count - 1) + slotMinutes));
     }

@@ -70,11 +70,26 @@ public class Slot {
         place(startTime, durationMinutes);
     }
 
+    /**
+     * Creates a free slot, failing if the duration is outside the allowed range.
+     *
+     * @param calendarId id of the calendar owning the slot
+     * @param startTime start of the slot
+     * @param durationMinutes duration in minutes
+     * @param limits bounds the duration must respect
+     */
     public static Slot create(Long calendarId, Instant startTime, int durationMinutes, SlotLimits limits) {
         limits.requireValidDuration(durationMinutes);
         return new Slot(calendarId, startTime, durationMinutes);
     }
 
+    /**
+     * Moves and/or resizes the slot; refused while the slot holds a meeting.
+     *
+     * @param startTime new start of the slot
+     * @param durationMinutes new duration in minutes
+     * @param limits bounds the duration must respect
+     */
     public void reschedule(Instant startTime, int durationMinutes, SlotLimits limits) {
         if (booked) {
             throw new ConflictException("Slot " + id + " has a meeting, cancel it before changing the slot time");
@@ -83,6 +98,9 @@ public class Slot {
         place(startTime, durationMinutes);
     }
 
+    /**
+     * Frees a slot that was blocked manually; refused while the slot holds a meeting.
+     */
     public void markFree() {
         if (booked) {
             throw new ConflictException("Slot " + id + " has a meeting, cancel it to free the slot");
@@ -90,12 +108,19 @@ public class Slot {
         this.status = SlotStatus.FREE;
     }
 
+    /**
+     * Blocks the slot without a meeting.
+     */
     public void markBusy() {
         this.status = SlotStatus.BUSY;
     }
 
     /**
      * Converts this free slot into a meeting, which makes the slot busy.
+     *
+     * @param title title of the meeting, must not be blank
+     * @param description optional description of the meeting
+     * @param participantIds ids of the participating users
      */
     public Meeting bookMeeting(String title, String description, Set<Long> participantIds) {
         if (booked) {
@@ -117,6 +142,9 @@ public class Slot {
         this.booked = false;
     }
 
+    /**
+     * Fails if the slot holds a meeting.
+     */
     public void requireDeletable() {
         if (booked) {
             throw new ConflictException("Slot " + id + " has a meeting, cancel it before deleting the slot");

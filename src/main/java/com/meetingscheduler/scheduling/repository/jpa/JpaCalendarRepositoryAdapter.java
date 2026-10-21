@@ -6,6 +6,9 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
+/**
+ * JPA adapter of {@link CalendarRepository}.
+ */
 @Repository
 class JpaCalendarRepositoryAdapter implements CalendarRepository {
 

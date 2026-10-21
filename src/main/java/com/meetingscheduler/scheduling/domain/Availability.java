@@ -17,6 +17,9 @@ public record Availability(TimeWindow window, ZoneId zone, Tally totals, List<Da
 
     public record Tally(int freeSlots, int busySlots, long freeMinutes, long busyMinutes) {
 
+        /**
+         * Free and busy slots together.
+         */
         public int totalSlots() {
             return freeSlots + busySlots;
         }
@@ -25,6 +28,13 @@ public record Availability(TimeWindow window, ZoneId zone, Tally totals, List<Da
     public record Day(LocalDate date, Tally tally) {
     }
 
+    /**
+     * Totals the spans overall and per day, where the day of a span is the date its start falls on in {@code zone}.
+     *
+     * @param window the time frame {@code [from, to)}
+     * @param zone time zone used to assign slots to days
+     * @param spans the slots to summarize
+     */
     public static Availability summarize(TimeWindow window, ZoneId zone, List<SlotSpan> spans) {
         Accumulator totals = new Accumulator();
         Map<LocalDate, Accumulator> perDay = new TreeMap<>();

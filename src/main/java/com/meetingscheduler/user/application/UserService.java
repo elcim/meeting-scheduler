@@ -10,6 +10,9 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Use cases around users: registering and looking them up.
+ */
 @Service
 @Transactional(readOnly = true)
 public class UserService {
@@ -25,6 +28,8 @@ public class UserService {
     /**
      * Registers the user. Listeners of {@link UserRegistered} run in the same transaction, so e.g. the user's calendar
      * is created atomically with the user.
+     *
+     * @param command name and email address of the new user
      */
     @Transactional
     public User register(RegisterUserCommand command) {
@@ -37,6 +42,11 @@ public class UserService {
         return user;
     }
 
+    /**
+     * Returns the user, failing if there is none with the id.
+     *
+     * @param userId id of the user
+     */
     public User get(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));

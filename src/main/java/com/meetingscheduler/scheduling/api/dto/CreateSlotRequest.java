@@ -6,6 +6,9 @@ import jakarta.validation.constraints.Positive;
 
 import java.time.Instant;
 
+/**
+ * Request body for creating a single slot.
+ */
 public record CreateSlotRequest(
         @NotNull Instant startTime,
         @NotNull @Positive Integer durationMinutes) {

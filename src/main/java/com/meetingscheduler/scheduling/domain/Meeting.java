@@ -59,6 +59,13 @@ public class Meeting {
         update(title, description, participantIds);
     }
 
+    /**
+     * Replaces the title, description and participants of the meeting.
+     *
+     * @param title new title, must not be blank
+     * @param description new description, may be {@code null}
+     * @param participantIds ids of the participating users
+     */
     public void update(String title, String description, Set<Long> participantIds) {
         this.title = title.trim();
         this.description = description;

@@ -28,6 +28,9 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 import java.time.Instant;
 
+/**
+ * REST endpoints for booking, viewing, updating and cancelling the meetings of a user.
+ */
 @RestController
 @RequestMapping("/api/users/{userId}/meetings")
 public class MeetingController {
@@ -40,6 +43,9 @@ public class MeetingController {
 
     /**
      * Converts a free slot of the user into a meeting.
+     *
+     * @param userId id of the user owning the slot, who becomes the organizer
+     * @param request the request body
      */
     @PostMapping
     public ResponseEntity<MeetingResponse> book(@PathVariable Long userId, @Valid @RequestBody BookMeetingRequest request) {
@@ -50,6 +56,12 @@ public class MeetingController {
 
     /**
      * Meetings held in the user's own slots.
+     *
+     * @param userId id of the organizing user, the owner of the slot
+     * @param from start of the time frame, inclusive
+     * @param to end of the time frame, exclusive
+     * @param page zero-based page index
+     * @param size page size, at most 200
      */
     @GetMapping
     public PageResponse<MeetingResponse> listOrganized(
@@ -65,6 +77,12 @@ public class MeetingController {
 
     /**
      * Meetings the user was invited to.
+     *
+     * @param userId id of the invited user
+     * @param from start of the time frame, inclusive
+     * @param to end of the time frame, exclusive
+     * @param page zero-based page index
+     * @param size page size, at most 200
      */
     @GetMapping("/participating")
     public PageResponse<MeetingResponse> listParticipating(
@@ -78,11 +96,24 @@ public class MeetingController {
                 MeetingResponse::from);
     }
 
+    /**
+     * Returns one of the user's meetings.
+     *
+     * @param userId id of the organizing user, the owner of the slot
+     * @param meetingId id of the meeting
+     */
     @GetMapping("/{meetingId}")
     public MeetingResponse get(@PathVariable Long userId, @PathVariable Long meetingId) {
         return MeetingResponse.from(meetingService.get(userId, meetingId));
     }
 
+    /**
+     * Replaces the title, description and participants of a meeting.
+     *
+     * @param userId id of the organizing user, the owner of the slot
+     * @param meetingId id of the meeting
+     * @param request the request body
+     */
     @PutMapping("/{meetingId}")
     public MeetingResponse update(@PathVariable Long userId, @PathVariable Long meetingId,
                                   @Valid @RequestBody UpdateMeetingRequest request) {
@@ -91,6 +122,9 @@ public class MeetingController {
 
     /**
      * Cancels the meeting; its slot becomes free again.
+     *
+     * @param userId id of the organizing user, the owner of the slot
+     * @param meetingId id of the meeting
      */
     @DeleteMapping("/{meetingId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

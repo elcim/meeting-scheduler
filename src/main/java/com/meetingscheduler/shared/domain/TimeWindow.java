@@ -14,6 +14,9 @@ public record TimeWindow(Instant from, Instant to) {
         }
     }
 
+    /**
+     * The time between {@code from} and {@code to}.
+     */
     public Duration length() {
         return Duration.between(from, to);
     }

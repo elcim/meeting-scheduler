@@ -7,6 +7,9 @@ import jakarta.validation.constraints.Size;
 
 import java.util.Set;
 
+/**
+ * Request body for changing the title, description and participants of a meeting.
+ */
 public record UpdateMeetingRequest(
         @NotBlank @Size(max = 200) String title,
         @Size(max = 4000) String description,

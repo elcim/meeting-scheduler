@@ -15,6 +15,9 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Spring Data repository for {@link Slot}, used by {@link JpaSlotRepositoryAdapter}.
+ */
 interface SpringDataSlotRepository extends JpaRepository<Slot, Long> {
 
     @Query("select s from Slot s where s.id = :id and s.calendarId = :calendarId")
@@ -26,6 +29,11 @@ interface SpringDataSlotRepository extends JpaRepository<Slot, Long> {
 
     /**
      * Whether any slot of the calendar intersects [start, end), ignoring the slot with id {@code excludedId}.
+     *
+     * @param calendarId id of the calendar
+     * @param start start of the time frame, inclusive
+     * @param end end of the time frame, exclusive
+     * @param excludedId id of a slot that is not taken into account
      */
     @Query("""
             select count(s) > 0 from Slot s

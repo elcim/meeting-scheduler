@@ -6,6 +6,9 @@ import org.springframework.stereotype.Component;
 
 import java.util.Set;
 
+/**
+ * Answers the scheduling context's questions about users by asking the user context's repository.
+ */
 @Component
 class UserDirectoryAdapter implements UserDirectory {
 

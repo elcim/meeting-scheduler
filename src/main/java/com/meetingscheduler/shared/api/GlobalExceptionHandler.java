@@ -21,30 +21,54 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * Translates exceptions into RFC 9457 problem detail responses.
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
+    /**
+     * An unknown resource is answered with 404.
+     *
+     * @param e the exception being handled
+     */
     @ExceptionHandler(ResourceNotFoundException.class)
     ProblemDetail notFound(ResourceNotFoundException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
     }
 
+    /**
+     * A request that cannot be served as given is answered with 400.
+     *
+     * @param e the exception being handled
+     */
     @ExceptionHandler(InvalidRequestException.class)
     ProblemDetail invalid(InvalidRequestException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 
+    /**
+     * A request that clashes with the current state is answered with 409.
+     *
+     * @param e the exception being handled
+     */
     @ExceptionHandler(ConflictException.class)
     ProblemDetail conflict(ConflictException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
     }
 
+    /**
+     * Losing an optimistic locking race is answered with 409.
+     */
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
     ProblemDetail concurrentModification() {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
                 "The resource was modified concurrently, reload it and retry");
     }
 
+    /**
+     * Timing out on a pessimistic lock is answered with 409.
+     */
     @ExceptionHandler(PessimisticLockingFailureException.class)
     ProblemDetail lockTimeout() {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,

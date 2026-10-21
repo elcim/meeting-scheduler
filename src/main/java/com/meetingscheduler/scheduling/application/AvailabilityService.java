@@ -10,6 +10,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.DateTimeException;
 import java.time.ZoneId;
 
+/**
+ * Use case for the aggregated free/busy view of a user's calendar.
+ */
 @Service
 @Transactional(readOnly = true)
 public class AvailabilityService {
@@ -25,6 +28,10 @@ public class AvailabilityService {
     }
 
     /**
+     * Totals the free and busy slots starting within the window, overall and per day.
+     *
+     * @param userId id of the user owning the calendar
+     * @param window the time frame {@code [from, to)}
      * @param zoneId time zone used to bucket slots into days, UTC when {@code null}
      */
     public Availability getAvailability(Long userId, TimeWindow window, String zoneId) {

@@ -5,6 +5,9 @@ import com.meetingscheduler.scheduling.domain.SlotStatus;
 
 import java.time.Instant;
 
+/**
+ * Representation of a slot.
+ */
 public record SlotResponse(
         Long id,
         Instant startTime,

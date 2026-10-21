@@ -13,6 +13,9 @@ import com.meetingscheduler.shared.domain.TimeWindow;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Use cases around meetings: booking a slot, viewing, updating and cancelling meetings.
+ */
 @Service
 @Transactional(readOnly = true)
 public class MeetingService {
@@ -36,6 +39,10 @@ public class MeetingService {
 
     /**
      * Converts a free slot of the user into a meeting, which makes the slot busy.
+     *
+     * @param userId id of the user owning the slot, who becomes the organizer
+     * @param slotId id of the slot
+     * @param details title, description and participants of the meeting
      */
     @Transactional
     public MeetingView book(Long userId, Long slotId, MeetingDetails details) {
@@ -51,12 +58,25 @@ public class MeetingService {
         return MeetingView.of(meeting, slot, userId);
     }
 
+    /**
+     * Returns a meeting held in one of the user's slots.
+     *
+     * @param userId id of the organizing user, the owner of the slot
+     * @param meetingId id of the meeting
+     */
     public MeetingView get(Long userId, Long meetingId) {
         Long calendarId = calendarLookup.calendarIdOf(userId);
         return meetingQueries.findViewInCalendar(meetingId, calendarId)
                 .orElseThrow(() -> new ResourceNotFoundException("Meeting", meetingId));
     }
 
+    /**
+     * Changes the title, description and participants of a meeting held in one of the user's slots.
+     *
+     * @param userId id of the organizing user, the owner of the slot
+     * @param meetingId id of the meeting
+     * @param details the new title, description and participants
+     */
     @Transactional
     public MeetingView update(Long userId, Long meetingId, MeetingDetails details) {
         requireValidParticipants(details);
@@ -70,6 +90,9 @@ public class MeetingService {
 
     /**
      * Cancels the meeting and frees its slot again.
+     *
+     * @param userId id of the organizing user, the owner of the slot
+     * @param meetingId id of the meeting
      */
     @Transactional
     public void cancel(Long userId, Long meetingId) {
@@ -83,6 +106,10 @@ public class MeetingService {
 
     /**
      * Meetings organized by the user (held in the user's slots) that start within the window.
+     *
+     * @param userId id of the organizing user, the owner of the slot
+     * @param window the time frame {@code [from, to)}
+     * @param page which page to fetch
      */
     public Page<MeetingView> listOrganized(Long userId, TimeWindow window, PageQuery page) {
         Long calendarId = calendarLookup.calendarIdOf(userId);
@@ -91,6 +118,10 @@ public class MeetingService {
 
     /**
      * Meetings the user was invited to that start within the window.
+     *
+     * @param userId id of the invited user
+     * @param window the time frame {@code [from, to)}
+     * @param page which page to fetch
      */
     public Page<MeetingView> listParticipating(Long userId, TimeWindow window, PageQuery page) {
         if (!userDirectory.exists(userId)) {

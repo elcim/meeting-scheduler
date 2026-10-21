@@ -24,12 +24,22 @@ public class SlotPlanner {
         this.limits = limits;
     }
 
+    /**
+     * Fails if the duration is outside the allowed range, without touching the calendar.
+     *
+     * @param minutes duration in minutes
+     */
     public void requireValidDuration(int minutes) {
         limits.requireValidDuration(minutes);
     }
 
     /**
      * Splits [from, to) into as many slots as fit; does not touch the calendar yet.
+     *
+     * @param from start of the time frame
+     * @param to end of the time frame
+     * @param slotMinutes duration of each slot in minutes
+     * @param gapMinutes pause between consecutive slots in minutes
      */
     public SlotSeries planSeries(Instant from, Instant to, int slotMinutes, int gapMinutes) {
         limits.requireValidDuration(slotMinutes);
@@ -45,6 +55,13 @@ public class SlotPlanner {
         return new SlotSeries(from, slotMinutes, gapMinutes, (int) count);
     }
 
+    /**
+     * Creates a slot in the calendar, failing if it overlaps an existing one.
+     *
+     * @param calendar the calendar the slot is placed in
+     * @param start start of the slot
+     * @param minutes duration of the slot in minutes
+     */
     public Slot place(Calendar calendar, Instant start, int minutes) {
         Slot slot = Slot.create(calendar.getId(), start, minutes, limits);
         if (slotRepository.existsOverlapping(calendar.getId(), new TimeWindow(slot.getStartTime(), slot.getEndTime()))) {
@@ -53,6 +70,12 @@ public class SlotPlanner {
         return slot;
     }
 
+    /**
+     * Creates the slots of the series in the calendar, failing if the series overlaps an existing slot.
+     *
+     * @param calendar the calendar the slot is placed in
+     * @param series the slots to create
+     */
     public List<Slot> place(Calendar calendar, SlotSeries series) {
         List<Slot> slots = series.starts().stream()
                 .map(start -> Slot.create(calendar.getId(), start, series.slotMinutes(), limits))
@@ -65,6 +88,13 @@ public class SlotPlanner {
         return slots;
     }
 
+    /**
+     * Moves and/or resizes the slot, failing if the new time overlaps another slot of the calendar.
+     *
+     * @param slot the slot to move or resize
+     * @param start new start of the slot
+     * @param minutes new duration in minutes
+     */
     public void reschedule(Slot slot, Instant start, int minutes) {
         slot.reschedule(start, minutes, limits);
         if (slotRepository.existsOverlappingExcluding(slot.getCalendarId(),

@@ -7,6 +7,9 @@ import jakarta.validation.constraints.Size;
 
 import java.util.Set;
 
+/**
+ * Request body for converting a free slot into a meeting.
+ */
 public record BookMeetingRequest(
         @NotNull Long slotId,
         @NotBlank @Size(max = 200) String title,

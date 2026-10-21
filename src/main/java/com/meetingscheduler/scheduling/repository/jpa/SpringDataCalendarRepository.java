@@ -9,6 +9,9 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
+/**
+ * Spring Data repository for {@link Calendar}, used by {@link JpaCalendarRepositoryAdapter}.
+ */
 interface SpringDataCalendarRepository extends JpaRepository<Calendar, Long> {
 
     @Query("select c.id from Calendar c where c.ownerId = :ownerId")

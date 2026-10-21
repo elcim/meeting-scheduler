@@ -4,6 +4,9 @@ import com.meetingscheduler.user.domain.User;
 
 import java.time.Instant;
 
+/**
+ * Representation of a user.
+ */
 public record UserResponse(Long id, String name, String email, Instant createdAt) {
 
     public static UserResponse from(User user) {

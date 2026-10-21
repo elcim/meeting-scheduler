@@ -31,6 +31,9 @@ import java.net.URI;
 import java.time.Instant;
 import java.util.List;
 
+/**
+ * REST endpoints for creating, listing, changing and deleting the slots of a user's calendar.
+ */
 @RestController
 @RequestMapping("/api/users/{userId}/slots")
 public class SlotController {
@@ -41,6 +44,12 @@ public class SlotController {
         this.slotService = slotService;
     }
 
+    /**
+     * Creates a single slot.
+     *
+     * @param userId id of the user owning the slot
+     * @param request the request body
+     */
     @PostMapping
     public ResponseEntity<SlotResponse> create(@PathVariable Long userId, @Valid @RequestBody CreateSlotRequest request) {
         SlotResponse slot = SlotResponse.from(slotService.create(userId, request.toCommand()));
@@ -48,12 +57,28 @@ public class SlotController {
         return ResponseEntity.created(location).body(slot);
     }
 
+    /**
+     * Splits a time frame into consecutive slots.
+     *
+     * @param userId id of the user owning the slot
+     * @param request the request body
+     */
     @PostMapping("/bulk")
     @ResponseStatus(HttpStatus.CREATED)
     public List<SlotResponse> createBulk(@PathVariable Long userId, @Valid @RequestBody BulkCreateSlotsRequest request) {
         return slotService.createBulk(userId, request.toCommand()).stream().map(SlotResponse::from).toList();
     }
 
+    /**
+     * Lists the slots starting within the time frame, optionally only the free or the busy ones.
+     *
+     * @param userId id of the user owning the slot
+     * @param from start of the time frame, inclusive
+     * @param to end of the time frame, exclusive
+     * @param status only slots with this status, any if omitted
+     * @param page zero-based page index
+     * @param size page size, at most 200
+     */
     @GetMapping
     public PageResponse<SlotResponse> list(
             @PathVariable Long userId,
@@ -67,17 +92,36 @@ public class SlotController {
                 SlotResponse::from);
     }
 
+    /**
+     * Returns one slot of the user.
+     *
+     * @param userId id of the user owning the slot
+     * @param slotId id of the slot
+     */
     @GetMapping("/{slotId}")
     public SlotResponse get(@PathVariable Long userId, @PathVariable Long slotId) {
         return SlotResponse.from(slotService.get(userId, slotId));
     }
 
+    /**
+     * Moves, resizes and/or changes the status of a slot.
+     *
+     * @param userId id of the user owning the slot
+     * @param slotId id of the slot
+     * @param request the request body
+     */
     @PatchMapping("/{slotId}")
     public SlotResponse update(@PathVariable Long userId, @PathVariable Long slotId,
                                @Valid @RequestBody UpdateSlotRequest request) {
         return SlotResponse.from(slotService.update(userId, slotId, request.toCommand()));
     }
 
+    /**
+     * Deletes a slot that holds no meeting.
+     *
+     * @param userId id of the user owning the slot
+     * @param slotId id of the slot
+     */
     @DeleteMapping("/{slotId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long userId, @PathVariable Long slotId) {

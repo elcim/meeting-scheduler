@@ -17,6 +17,11 @@ class CalendarLookup {
         this.calendarRepository = calendarRepository;
     }
 
+    /**
+     * Id of the user's calendar; fails with {@link ResourceNotFoundException} for an unknown user.
+     *
+     * @param userId id of the user owning the calendar
+     */
     Long calendarIdOf(Long userId) {
         return calendarRepository.findIdByOwner(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
@@ -24,6 +29,8 @@ class CalendarLookup {
 
     /**
      * Must be called inside a transaction; the lock is held until it ends.
+     *
+     * @param userId id of the user owning the calendar
      */
     Calendar lockCalendarOf(Long userId) {
         return calendarRepository.findByOwnerForUpdate(userId)

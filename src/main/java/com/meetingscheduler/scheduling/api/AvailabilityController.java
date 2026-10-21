@@ -12,6 +12,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
 
+/**
+ * REST endpoint for the aggregated free/busy view of a user's calendar.
+ */
 @RestController
 @RequestMapping("/api/users/{userId}/availability")
 public class AvailabilityController {
@@ -25,6 +28,9 @@ public class AvailabilityController {
     /**
      * Aggregated free/busy view of the slots starting within [from, to).
      *
+     * @param userId id of the user owning the calendar
+     * @param from start of the time frame, inclusive
+     * @param to end of the time frame, exclusive
      * @param zone time zone used to bucket slots into days, UTC by default
      */
     @GetMapping

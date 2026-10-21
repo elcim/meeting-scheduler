@@ -18,6 +18,11 @@ class CalendarProvisioning {
         this.calendarRepository = calendarRepository;
     }
 
+    /**
+     * Creates the calendar of a newly registered user.
+     *
+     * @param event the registered user
+     */
     @EventListener
     void on(UserRegistered event) {
         calendarRepository.save(new Calendar(event.userId()));
