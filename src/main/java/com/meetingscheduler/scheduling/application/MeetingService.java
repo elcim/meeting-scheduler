@@ -1,5 +1,6 @@
 package com.meetingscheduler.scheduling.application;
 
+import com.meetingscheduler.scheduling.application.SchedulerMetrics.Operation;
 import com.meetingscheduler.scheduling.domain.Meeting;
 import com.meetingscheduler.scheduling.domain.MeetingLimits;
 import com.meetingscheduler.scheduling.repository.MeetingRepository;
@@ -26,15 +27,18 @@ public class MeetingService {
     private final UserDirectory userDirectory;
     private final CalendarLookup calendarLookup;
     private final MeetingLimits limits;
+    private final SchedulerMetrics metrics;
 
     MeetingService(MeetingRepository meetingRepository, SlotRepository slotRepository, MeetingQueries meetingQueries,
-                   UserDirectory userDirectory, CalendarLookup calendarLookup, MeetingLimits limits) {
+                   UserDirectory userDirectory, CalendarLookup calendarLookup, MeetingLimits limits,
+                   SchedulerMetrics metrics) {
         this.meetingRepository = meetingRepository;
         this.slotRepository = slotRepository;
         this.meetingQueries = meetingQueries;
         this.userDirectory = userDirectory;
         this.calendarLookup = calendarLookup;
         this.limits = limits;
+        this.metrics = metrics;
     }
 
     /**
@@ -53,8 +57,10 @@ public class MeetingService {
         Slot slot = slotRepository.findInCalendarForUpdate(slotId, calendarId)
                 .orElseThrow(() -> new ResourceNotFoundException("Slot", slotId));
 
-        Meeting meeting = meetingRepository.save(
-                slot.bookMeeting(details.title(), details.description(), details.participantIds()));
+        Meeting booked = metrics.countConflicts(Operation.BOOK_MEETING,
+                () -> slot.bookMeeting(details.title(), details.description(), details.participantIds()));
+        Meeting meeting = meetingRepository.save(booked);
+        metrics.meetingBooked();
         return MeetingView.of(meeting, slot, userId);
     }
 
@@ -102,6 +108,7 @@ public class MeetingService {
                 .orElseThrow(() -> new ResourceNotFoundException("Slot", meeting.getSlotId()));
         meetingRepository.delete(meeting);
         slot.releaseMeeting();
+        metrics.meetingCancelled();
     }
 
     /**

@@ -12,9 +12,11 @@ import org.springframework.stereotype.Component;
 class CalendarLookup {
 
     private final CalendarRepository calendarRepository;
+    private final SchedulerMetrics metrics;
 
-    CalendarLookup(CalendarRepository calendarRepository) {
+    CalendarLookup(CalendarRepository calendarRepository, SchedulerMetrics metrics) {
         this.calendarRepository = calendarRepository;
+        this.metrics = metrics;
     }
 
     /**
@@ -33,7 +35,7 @@ class CalendarLookup {
      * @param userId id of the user owning the calendar
      */
     Calendar lockCalendarOf(Long userId) {
-        return calendarRepository.findByOwnerForUpdate(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+        return metrics.timeCalendarLock(() -> calendarRepository.findByOwnerForUpdate(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId)));
     }
 }

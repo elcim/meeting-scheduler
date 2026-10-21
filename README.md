@@ -34,14 +34,15 @@ com.meetingscheduler
 ├── shared          shared kernel: DomainException types, TimeWindow, Page/PageQuery, error handling (RFC 9457)
 ├── user            bounded context: who the users are
 │   ├── domain          User (aggregate), EmailAddress (value object), UserRegistered (domain event)
-│   ├── application     UserService (use cases, transactions), RegisterUserCommand
+│   ├── application     UserService (use cases, transactions), RegisterUserCommand, UserMetrics (event listener)
 │   ├── repository      UserRepository (port); jpa: Spring Data interface and JPA adapter
 │   └── api             UserController, request/response DTOs
 └── scheduling      bounded context: calendars, slots, meetings, availability
     ├── domain          Calendar, Slot, Meeting (aggregates); SlotPlanner (domain service); Availability, SlotSeries,
     │                   SlotLimits, MeetingLimits (value objects)
     ├── application     SlotService, MeetingService, AvailabilityService; commands; MeetingView + MeetingQueries
-    │                   (read model); UserDirectory (port to the user context); CalendarProvisioning (event listener)
+    │                   (read model); UserDirectory (port to the user context); CalendarProvisioning (event listener);
+    │                   SchedulerMetrics (business metrics)
     ├── repository      Calendar/Slot/Meeting repository ports; jpa: Spring Data interfaces and JPA adapters
     ├── infrastructure  configuration properties, wiring of domain services, UserDirectory adapter
     └── api             Slot/Meeting/Availability controllers and DTOs
@@ -99,6 +100,44 @@ HTML with `mvn javadoc:javadoc` (output in `target/reports/apidocs`).
   overlapping slots, and users do not block each other. Booking locks the slot row, so of concurrent bookings of
   one slot exactly one wins (`409` for the others); a unique constraint on `meeting.slot_id` backs this up.
 * Open-in-view is disabled and the lazy associations are batch fetched, avoiding N+1 queries.
+
+## Metrics and health
+
+Spring Boot Actuator and Micrometer publish metrics, tagged with `application=meeting-scheduler`. Only
+`health`, `info`, `metrics` and `prometheus` are exposed (`management.endpoints.web.exposure.include` in
+`application.yml`).
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /actuator/health` | Liveness/readiness status |
+| `GET /actuator/metrics` and `/actuator/metrics/{name}` | Browse the meters, e.g. `curl 'http://localhost:8080/actuator/metrics/scheduler.conflicts?tag=operation:book_meeting'` |
+| `GET /actuator/prometheus` | All meters in the Prometheus text format, to be scraped by Prometheus |
+
+Besides the standard JVM, Tomcat, HikariCP and `http.server.requests` (counts and timings per URI template and status)
+meters, the application reports business metrics. They are recorded by the application services, not the domain, are
+tagged by outcome only (never by user, slot or meeting id) and meters that count successes only count after the
+transaction committed.
+
+| Meter (Prometheus name) | Tags | Meaning |
+|---|---|---|
+| `scheduler.meetings` (`scheduler_meetings_total`) | `event=booked\|cancelled` | Meetings booked and cancelled |
+| `scheduler.slots` (`scheduler_slots_total`) | `event=created` | Slots created, one by one or in bulk |
+| `scheduler.conflicts` (`scheduler_conflicts_total`) | `operation=book_meeting\|create_slot\|create_slots_bulk\|update_slot\|delete_slot` | Requests refused with `409` because of the state of the data, such as a double booking or an overlapping slot |
+| `scheduler.calendar.lock.wait` (`scheduler_calendar_lock_wait_seconds_*`) | | Time spent waiting for a user's calendar lock; grows when slot changes of one user contend |
+| `scheduler.users.registered` (`scheduler_users_registered_total`) | | Users registered |
+
+A Prometheus job for a local run:
+
+```yaml
+scrape_configs:
+  - job_name: meeting-scheduler
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ['localhost:8080']
+```
+
+The actuator endpoints are unauthenticated. The application has no security layer, so in a shared environment put
+them on a separate port (`management.server.port`) that is not publicly reachable.
 
 ## API
 

@@ -1,5 +1,6 @@
 package com.meetingscheduler.scheduling.application;
 
+import com.meetingscheduler.scheduling.application.SchedulerMetrics.Operation;
 import com.meetingscheduler.scheduling.domain.Calendar;
 import com.meetingscheduler.scheduling.domain.Slot;
 import com.meetingscheduler.scheduling.domain.SlotPlanner;
@@ -27,11 +28,14 @@ public class SlotService {
     private final SlotRepository slotRepository;
     private final SlotPlanner slotPlanner;
     private final CalendarLookup calendarLookup;
+    private final SchedulerMetrics metrics;
 
-    SlotService(SlotRepository slotRepository, SlotPlanner slotPlanner, CalendarLookup calendarLookup) {
+    SlotService(SlotRepository slotRepository, SlotPlanner slotPlanner, CalendarLookup calendarLookup,
+                SchedulerMetrics metrics) {
         this.slotRepository = slotRepository;
         this.slotPlanner = slotPlanner;
         this.calendarLookup = calendarLookup;
+        this.metrics = metrics;
     }
 
     /**
@@ -45,7 +49,11 @@ public class SlotService {
         slotPlanner.requireValidDuration(command.durationMinutes());
         Calendar calendar = calendarLookup.lockCalendarOf(userId);
 
-        return slotRepository.save(slotPlanner.place(calendar, command.startTime(), command.durationMinutes()));
+        Slot slot = metrics.countConflicts(Operation.CREATE_SLOT,
+                () -> slotPlanner.place(calendar, command.startTime(), command.durationMinutes()));
+        Slot created = slotRepository.save(slot);
+        metrics.slotsCreated(1);
+        return created;
     }
 
     /**
@@ -60,7 +68,10 @@ public class SlotService {
                 command.slotDurationMinutes(), command.gapMinutes());
         Calendar calendar = calendarLookup.lockCalendarOf(userId);
 
-        return slotRepository.saveAll(slotPlanner.place(calendar, series));
+        List<Slot> slots = metrics.countConflicts(Operation.CREATE_SLOTS_BULK, () -> slotPlanner.place(calendar, series));
+        List<Slot> created = slotRepository.saveAll(slots);
+        metrics.slotsCreated(created.size());
+        return created;
     }
 
     /**
@@ -107,16 +118,18 @@ public class SlotService {
         Slot slot = slotRepository.findInCalendarForUpdate(slotId, calendarId)
                 .orElseThrow(() -> new ResourceNotFoundException("Slot", slotId));
 
-        if (changesTime) {
-            Instant start = command.startTime() != null ? command.startTime() : slot.getStartTime();
-            int duration = command.durationMinutes() != null ? command.durationMinutes() : slot.getDurationMinutes();
-            slotPlanner.reschedule(slot, start, duration);
-        }
-        if (command.status() == SlotStatus.FREE) {
-            slot.markFree();
-        } else if (command.status() == SlotStatus.BUSY) {
-            slot.markBusy();
-        }
+        metrics.countConflictsOf(Operation.UPDATE_SLOT, () -> {
+            if (changesTime) {
+                Instant start = command.startTime() != null ? command.startTime() : slot.getStartTime();
+                int duration = command.durationMinutes() != null ? command.durationMinutes() : slot.getDurationMinutes();
+                slotPlanner.reschedule(slot, start, duration);
+            }
+            if (command.status() == SlotStatus.FREE) {
+                slot.markFree();
+            } else if (command.status() == SlotStatus.BUSY) {
+                slot.markBusy();
+            }
+        });
         return slot;
     }
 
@@ -131,7 +144,7 @@ public class SlotService {
         Long calendarId = calendarLookup.calendarIdOf(userId);
         Slot slot = slotRepository.findInCalendarForUpdate(slotId, calendarId)
                 .orElseThrow(() -> new ResourceNotFoundException("Slot", slotId));
-        slot.requireDeletable();
+        metrics.countConflictsOf(Operation.DELETE_SLOT, slot::requireDeletable);
         slotRepository.delete(slot);
     }
 }

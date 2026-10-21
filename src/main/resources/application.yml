@@ -32,6 +32,15 @@ spring:
     problemdetails:
       enabled: true
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
 server:
   compression:
     enabled: true
