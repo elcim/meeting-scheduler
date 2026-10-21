@@ -1,0 +1,908 @@
+openapi: 3.0.3
+info:
+  title: Meeting Scheduler API
+  version: 0.0.1
+  description: |
+    Backend for managing time slots, scheduling meetings and viewing availability.
+
+    **Concepts**
+
+    * Every user owns exactly one calendar, created together with the user. The calendar is a domain concept only and
+      never appears in the API: everything is addressed through `/api/users/{userId}`.
+    * A **slot** is a `[startTime, endTime)` interval of a user's calendar that is either `FREE` or `BUSY`. Slots of one
+      calendar never overlap.
+    * A **meeting** converts a free slot into a busy one and adds a title, a description and participants. The owner of
+      the slot is the organizer. Cancelling the meeting frees the slot again. A slot that holds a meeting cannot be
+      deleted, moved, resized or freed until the meeting is cancelled.
+
+    **Conventions**
+
+    * Timestamps are ISO-8601 instants with an offset, for example `2030-01-01T09:00:00Z`. In a query string a `+`
+      offset has to be encoded as `%2B`.
+    * Collections are bound to a time window (`from` inclusive, `to` exclusive) and paginated. `page` is **zero-based**
+      (`page=1` is the second page).
+    * Errors are [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) problem details (`application/problem+json`).
+    * Optional properties that have no value are omitted from responses instead of being `null`.
+    * Limits (slot duration, bulk size, availability window, participants) are configurable under `scheduler.*` in
+      `application.yml`; the values given in this document are the defaults.
+servers:
+  - url: http://localhost:8080
+    description: Local development
+tags:
+  - name: Users
+    description: Registering and looking up users.
+  - name: Slots
+    description: Managing the time slots of a user's calendar.
+  - name: Meetings
+    description: Booking, viewing, updating and cancelling meetings.
+  - name: Availability
+    description: Aggregated free/busy view of a user's calendar.
+
+paths:
+  /api/users:
+    post:
+      tags: [Users]
+      operationId: createUser
+      summary: Register a user
+      description: Registers a user. The user's calendar is created in the same transaction.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: The user was created.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: A user with this email address already exists.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /api/users/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    get:
+      tags: [Users]
+      operationId: getUser
+      summary: Get a user
+      responses:
+        '200':
+          description: The user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/users/{userId}/slots:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    post:
+      tags: [Slots]
+      operationId: createSlot
+      summary: Create a slot
+      description: >
+        Creates a free slot. The duration has to be within the configured range (5 to 480 minutes by default).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSlotRequest'
+      responses:
+        '201':
+          description: The slot was created.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Slot'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/SlotConflict'
+    get:
+      tags: [Slots]
+      operationId: listSlots
+      summary: List slots
+      description: >
+        Lists the slots that start within the time frame, ordered by start time, optionally restricted to free or busy
+        slots.
+      parameters:
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - name: status
+          in: query
+          required: false
+          description: Only return slots with this status. All slots are returned when omitted.
+          schema:
+            $ref: '#/components/schemas/SlotStatus'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: A page of slots.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/users/{userId}/slots/bulk:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    post:
+      tags: [Slots]
+      operationId: createSlotsInBulk
+      summary: Create slots in bulk
+      description: >
+        Splits the time frame `[from, to)` into consecutive slots of `slotDurationMinutes`, separated by `gapMinutes`.
+        A trailing remainder shorter than a full slot is not created. Either all slots are created or none. At most
+        500 slots can be created at once (configurable).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkCreateSlotsRequest'
+      responses:
+        '201':
+          description: The slots that were created, in chronological order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Slot'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/SlotConflict'
+
+  /api/users/{userId}/slots/{slotId}:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+      - $ref: '#/components/parameters/SlotId'
+    get:
+      tags: [Slots]
+      operationId: getSlot
+      summary: Get a slot
+      responses:
+        '200':
+          description: The slot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Slot'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Slots]
+      operationId: updateSlot
+      summary: Update a slot
+      description: >
+        Partial update: only the provided properties are changed, and at least one has to be provided. A slot that
+        holds a meeting cannot be moved, resized or freed until the meeting is cancelled. Setting the status to
+        `BUSY` blocks the slot without a meeting; setting it to `FREE` releases a manual block.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSlotRequest'
+      responses:
+        '200':
+          description: The updated slot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Slot'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: >
+            The new time overlaps another slot, or the slot holds a meeting and cannot be moved, resized or freed.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    delete:
+      tags: [Slots]
+      operationId: deleteSlot
+      summary: Delete a slot
+      description: Deletes a slot. A slot that holds a meeting cannot be deleted until the meeting is cancelled.
+      responses:
+        '204':
+          description: The slot was deleted.
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: The slot holds a meeting.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /api/users/{userId}/meetings:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    post:
+      tags: [Meetings]
+      operationId: bookMeeting
+      summary: Book a meeting
+      description: >
+        Converts a free slot of the user into a meeting, which makes the slot busy. The user is the organizer.
+        Concurrent attempts to book the same slot are serialized: exactly one succeeds and the others receive `409`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookMeetingRequest'
+      responses:
+        '201':
+          description: The meeting was booked.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Meeting'
+        '400':
+          description: >
+            Validation failed, or a participant is an unknown user, or the participants exceed the allowed number (100
+            by default).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: The user does not exist, or the slot does not exist in the user's calendar.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The slot is busy or already holds a meeting.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    get:
+      tags: [Meetings]
+      operationId: listOrganizedMeetings
+      summary: List organized meetings
+      description: Lists the meetings held in the user's own slots that start within the time frame.
+      parameters:
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: A page of meetings, ordered by start time.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/users/{userId}/meetings/participating:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    get:
+      tags: [Meetings]
+      operationId: listParticipatingMeetings
+      summary: List meetings the user was invited to
+      description: Lists the meetings the user was invited to that start within the time frame.
+      parameters:
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: A page of meetings, ordered by start time.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/users/{userId}/meetings/{meetingId}:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+      - $ref: '#/components/parameters/MeetingId'
+    get:
+      tags: [Meetings]
+      operationId: getMeeting
+      summary: Get a meeting
+      description: Returns a meeting held in one of the user's slots.
+      responses:
+        '200':
+          description: The meeting.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Meeting'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Meetings]
+      operationId: updateMeeting
+      summary: Update a meeting
+      description: Replaces the title, description and participants of a meeting held in one of the user's slots.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMeetingRequest'
+      responses:
+        '200':
+          description: The updated meeting.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Meeting'
+        '400':
+          description: >
+            Validation failed, or a participant is an unknown user, or the participants exceed the allowed number (100
+            by default).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Meetings]
+      operationId: cancelMeeting
+      summary: Cancel a meeting
+      description: Cancels the meeting and frees its slot.
+      responses:
+        '204':
+          description: The meeting was cancelled and its slot is free again.
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/users/{userId}/availability:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    get:
+      tags: [Availability]
+      operationId: getAvailability
+      summary: Get availability
+      description: >
+        Aggregated free/busy counts and minutes of the slots that start within the time frame, in total and per day.
+        The time frame can span at most 62 days (configurable).
+      parameters:
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - name: zone
+          in: query
+          required: false
+          description: Time zone used to assign slots to days. UTC when omitted.
+          schema:
+            type: string
+            default: UTC
+            example: Europe/Berlin
+      responses:
+        '200':
+          description: The availability.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Availability'
+        '400':
+          description: The time frame is longer than allowed, the time zone is unknown, or a parameter is invalid.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  parameters:
+    UserId:
+      name: userId
+      in: path
+      required: true
+      description: Id of the user.
+      schema:
+        type: integer
+        format: int64
+        example: 1
+    SlotId:
+      name: slotId
+      in: path
+      required: true
+      description: Id of the slot, which has to belong to the user's calendar.
+      schema:
+        type: integer
+        format: int64
+        example: 1
+    MeetingId:
+      name: meetingId
+      in: path
+      required: true
+      description: Id of the meeting, which has to be held in one of the user's slots.
+      schema:
+        type: integer
+        format: int64
+        example: 1
+    From:
+      name: from
+      in: query
+      required: true
+      description: Start of the time frame, inclusive. An ISO-8601 instant with an offset.
+      schema:
+        type: string
+        format: date-time
+        example: '2030-01-01T00:00:00Z'
+    To:
+      name: to
+      in: query
+      required: true
+      description: End of the time frame, exclusive. An ISO-8601 instant with an offset; has to be after `from`.
+      schema:
+        type: string
+        format: date-time
+        example: '2030-01-08T00:00:00Z'
+    Page:
+      name: page
+      in: query
+      required: false
+      description: Zero-based page index.
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    Size:
+      name: size
+      in: query
+      required: false
+      description: Page size.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+
+  headers:
+    Location:
+      description: URI of the created resource.
+      schema:
+        type: string
+        format: uri
+        example: http://localhost:8080/api/users/1/slots/1
+
+  responses:
+    BadRequest:
+      description: >
+        The request is invalid: a body property failed validation (see `errors`), a parameter is missing or malformed,
+        or a business limit was exceeded.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    NotFound:
+      description: The user, or the slot or meeting within the user's calendar, does not exist.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    SlotConflict:
+      description: The new slot or slots overlap an existing slot of the calendar.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+  schemas:
+    SlotStatus:
+      type: string
+      description: Whether a slot can still be used for a meeting.
+      enum: [FREE, BUSY]
+
+    User:
+      type: object
+      required: [id, name, email, createdAt]
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        name:
+          type: string
+          example: Ada
+        email:
+          type: string
+          format: email
+          description: Canonical form of the address (trimmed, lower case).
+          example: ada@example.com
+        createdAt:
+          type: string
+          format: date-time
+          example: '2030-01-01T08:00:00Z'
+
+    CreateUserRequest:
+      type: object
+      required: [name, email]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Display name. Must not be blank.
+          example: Ada
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          description: Email address, unique among users (compared case-insensitively). Must not be blank.
+          example: ada@example.com
+
+    Slot:
+      type: object
+      required: [id, startTime, endTime, durationMinutes, status, booked]
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        startTime:
+          type: string
+          format: date-time
+          example: '2030-01-01T09:00:00Z'
+        endTime:
+          type: string
+          format: date-time
+          description: End of the slot, exclusive.
+          example: '2030-01-01T09:30:00Z'
+        durationMinutes:
+          type: integer
+          example: 30
+        status:
+          $ref: '#/components/schemas/SlotStatus'
+        booked:
+          type: boolean
+          description: >
+            True while a meeting is scheduled in the slot. A booked slot is always `BUSY`; a busy slot that is not booked
+            was blocked manually.
+
+    CreateSlotRequest:
+      type: object
+      required: [startTime, durationMinutes]
+      properties:
+        startTime:
+          type: string
+          format: date-time
+          example: '2030-01-01T09:00:00Z'
+        durationMinutes:
+          type: integer
+          minimum: 5
+          maximum: 480
+          description: Duration in minutes; the allowed range is configurable.
+          example: 30
+
+    BulkCreateSlotsRequest:
+      type: object
+      required: [from, to, slotDurationMinutes]
+      properties:
+        from:
+          type: string
+          format: date-time
+          description: Start of the time frame, inclusive.
+          example: '2030-01-02T09:00:00Z'
+        to:
+          type: string
+          format: date-time
+          description: End of the time frame, exclusive. Has to be after `from`.
+          example: '2030-01-02T12:00:00Z'
+        slotDurationMinutes:
+          type: integer
+          minimum: 5
+          maximum: 480
+          description: Duration of each slot in minutes; the allowed range is configurable.
+          example: 30
+        gapMinutes:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Pause between consecutive slots in minutes.
+          example: 10
+
+    UpdateSlotRequest:
+      type: object
+      minProperties: 1
+      description: Partial update. Only the provided properties are changed; at least one has to be provided.
+      properties:
+        startTime:
+          type: string
+          format: date-time
+          description: New start of the slot.
+          example: '2030-01-01T10:00:00Z'
+        durationMinutes:
+          type: integer
+          minimum: 5
+          maximum: 480
+          description: New duration in minutes; the allowed range is configurable.
+          example: 45
+        status:
+          $ref: '#/components/schemas/SlotStatus'
+
+    Meeting:
+      type: object
+      required: [id, slotId, organizerId, title, startTime, endTime, participantIds, createdAt]
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        slotId:
+          type: integer
+          format: int64
+          description: The slot that holds the meeting.
+          example: 2
+        organizerId:
+          type: integer
+          format: int64
+          description: The user owning the slot.
+          example: 1
+        title:
+          type: string
+          example: Sync
+        description:
+          type: string
+          description: Omitted when the meeting has no description.
+          example: Weekly sync
+        startTime:
+          type: string
+          format: date-time
+          description: Start of the slot.
+          example: '2030-01-02T09:00:00Z'
+        endTime:
+          type: string
+          format: date-time
+          description: End of the slot.
+          example: '2030-01-02T09:30:00Z'
+        participantIds:
+          type: array
+          uniqueItems: true
+          items:
+            type: integer
+            format: int64
+          description: Ids of the invited users.
+          example: [2]
+        createdAt:
+          type: string
+          format: date-time
+          example: '2030-01-01T08:30:00Z'
+
+    BookMeetingRequest:
+      type: object
+      required: [slotId, title, participantIds]
+      properties:
+        slotId:
+          type: integer
+          format: int64
+          description: A free slot of the user.
+          example: 2
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Must not be blank.
+          example: Sync
+        description:
+          type: string
+          maxLength: 4000
+          example: Weekly sync
+        participantIds:
+          type: array
+          uniqueItems: true
+          maxItems: 100
+          items:
+            type: integer
+            format: int64
+          description: Ids of existing users; may be empty.
+          example: [2]
+
+    UpdateMeetingRequest:
+      type: object
+      required: [title, participantIds]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Must not be blank.
+          example: Sync
+        description:
+          type: string
+          maxLength: 4000
+          description: The description is removed when omitted.
+          example: Moved to Friday
+        participantIds:
+          type: array
+          uniqueItems: true
+          maxItems: 100
+          items:
+            type: integer
+            format: int64
+          description: Ids of existing users; replaces the current participants. May be empty.
+          example: [2]
+
+    Availability:
+      type: object
+      description: Aggregated free/busy view of the slots starting within `[from, to)`.
+      required: [from, to, zone, totals, days]
+      properties:
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        zone:
+          type: string
+          description: Time zone used to assign slots to days.
+          example: Europe/Berlin
+        totals:
+          $ref: '#/components/schemas/AvailabilityTotals'
+        days:
+          type: array
+          description: Only days that have at least one slot, in chronological order.
+          items:
+            $ref: '#/components/schemas/AvailabilityDay'
+
+    AvailabilityTotals:
+      type: object
+      required: [totalSlots, freeSlots, busySlots, freeMinutes, busyMinutes]
+      properties:
+        totalSlots:
+          type: integer
+          example: 4
+        freeSlots:
+          type: integer
+          example: 3
+        busySlots:
+          type: integer
+          example: 1
+        freeMinutes:
+          type: integer
+          format: int64
+          example: 90
+        busyMinutes:
+          type: integer
+          format: int64
+          example: 30
+
+    AvailabilityDay:
+      type: object
+      description: Slots that start on this day in the requested time zone.
+      required: [date, freeSlots, busySlots, freeMinutes, busyMinutes]
+      properties:
+        date:
+          type: string
+          format: date
+          example: '2030-01-02'
+        freeSlots:
+          type: integer
+          example: 3
+        busySlots:
+          type: integer
+          example: 1
+        freeMinutes:
+          type: integer
+          format: int64
+          example: 90
+        busyMinutes:
+          type: integer
+          format: int64
+          example: 30
+
+    SlotPage:
+      allOf:
+        - $ref: '#/components/schemas/PageInfo'
+        - type: object
+          required: [content]
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/Slot'
+
+    MeetingPage:
+      allOf:
+        - $ref: '#/components/schemas/PageInfo'
+        - type: object
+          required: [content]
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/Meeting'
+
+    PageInfo:
+      type: object
+      required: [page, size, totalElements, totalPages]
+      properties:
+        page:
+          type: integer
+          description: Zero-based index of this page.
+          example: 0
+        size:
+          type: integer
+          description: Requested page size.
+          example: 50
+        totalElements:
+          type: integer
+          format: int64
+          description: Number of elements over all pages.
+          example: 1
+        totalPages:
+          type: integer
+          example: 1
+
+    Problem:
+      type: object
+      description: Problem details according to RFC 9457.
+      properties:
+        type:
+          type: string
+          format: uri
+          example: about:blank
+        title:
+          type: string
+          example: Bad Request
+        status:
+          type: integer
+          example: 400
+        detail:
+          type: string
+          example: Request validation failed
+        instance:
+          type: string
+          description: Path of the request.
+          example: /api/users
+        errors:
+          type: object
+          description: Only present when body validation failed. The message of the first violation per property.
+          additionalProperties:
+            type: string
+          example:
+            email: must be a well-formed email address
