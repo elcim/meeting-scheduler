@@ -1,9 +1,9 @@
-package com.meetingscheduler.scheduling.infrastructure;
+package com.meetingscheduler.scheduling.repository.jpa;
 
 import com.meetingscheduler.scheduling.application.MeetingQueries;
 import com.meetingscheduler.scheduling.application.MeetingView;
 import com.meetingscheduler.scheduling.domain.Meeting;
-import com.meetingscheduler.scheduling.domain.MeetingRepository;
+import com.meetingscheduler.scheduling.repository.MeetingRepository;
 import com.meetingscheduler.shared.domain.Page;
 import com.meetingscheduler.shared.domain.PageQuery;
 import com.meetingscheduler.shared.domain.TimeWindow;

@@ -4,7 +4,7 @@ import com.meetingscheduler.scheduling.application.AvailabilityLimits;
 import com.meetingscheduler.scheduling.domain.MeetingLimits;
 import com.meetingscheduler.scheduling.domain.SlotLimits;
 import com.meetingscheduler.scheduling.domain.SlotPlanner;
-import com.meetingscheduler.scheduling.domain.SlotRepository;
+import com.meetingscheduler.scheduling.repository.SlotRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

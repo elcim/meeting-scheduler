@@ -1,7 +1,7 @@
 package com.meetingscheduler.scheduling.application;
 
 import com.meetingscheduler.scheduling.domain.Calendar;
-import com.meetingscheduler.scheduling.domain.CalendarRepository;
+import com.meetingscheduler.scheduling.repository.CalendarRepository;
 import com.meetingscheduler.user.domain.UserRegistered;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;

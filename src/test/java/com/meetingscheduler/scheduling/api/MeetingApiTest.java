@@ -47,8 +47,8 @@ class MeetingApiTest extends ApiTestSupport {
         bookMeeting(organizer, busySlot, "Busy").andExpect(status().isConflict());
         bookMeeting(createUser(), slot, "Not mine").andExpect(status().isNotFound());
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-                        .post("/api/users/{u}/slots/{s}/meeting", organizer, slot)
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"title\": \"\"}"))
+                        .post("/api/users/{u}/meetings", organizer)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"slotId\": " + slot + ", \"title\": \"\"}"))
                 .andExpect(status().isBadRequest());
     }
 

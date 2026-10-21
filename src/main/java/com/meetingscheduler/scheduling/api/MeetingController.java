@@ -1,6 +1,7 @@
 package com.meetingscheduler.scheduling.api;
 
-import com.meetingscheduler.scheduling.api.dto.MeetingRequest;
+import com.meetingscheduler.scheduling.api.dto.BookMeetingRequest;
+import com.meetingscheduler.scheduling.api.dto.UpdateMeetingRequest;
 import com.meetingscheduler.scheduling.api.dto.MeetingResponse;
 import com.meetingscheduler.scheduling.application.MeetingService;
 import com.meetingscheduler.shared.api.PageResponse;
@@ -11,16 +12,20 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.time.Instant;
 
 @RestController
@@ -31,6 +36,16 @@ public class MeetingController {
 
     public MeetingController(MeetingService meetingService) {
         this.meetingService = meetingService;
+    }
+
+    /**
+     * Converts a free slot of the user into a meeting.
+     */
+    @PostMapping
+    public ResponseEntity<MeetingResponse> book(@PathVariable Long userId, @Valid @RequestBody BookMeetingRequest request) {
+        MeetingResponse meeting = MeetingResponse.from(meetingService.book(userId, request.slotId(), request.toDetails()));
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(meeting.id()).toUri();
+        return ResponseEntity.created(location).body(meeting);
     }
 
     /**
@@ -70,7 +85,7 @@ public class MeetingController {
 
     @PutMapping("/{meetingId}")
     public MeetingResponse update(@PathVariable Long userId, @PathVariable Long meetingId,
-                                  @Valid @RequestBody MeetingRequest request) {
+                                  @Valid @RequestBody UpdateMeetingRequest request) {
         return MeetingResponse.from(meetingService.update(userId, meetingId, request.toDetails()));
     }
 

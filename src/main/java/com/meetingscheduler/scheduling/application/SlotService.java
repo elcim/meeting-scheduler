@@ -3,7 +3,7 @@ package com.meetingscheduler.scheduling.application;
 import com.meetingscheduler.scheduling.domain.Calendar;
 import com.meetingscheduler.scheduling.domain.Slot;
 import com.meetingscheduler.scheduling.domain.SlotPlanner;
-import com.meetingscheduler.scheduling.domain.SlotRepository;
+import com.meetingscheduler.scheduling.repository.SlotRepository;
 import com.meetingscheduler.scheduling.domain.SlotSeries;
 import com.meetingscheduler.scheduling.domain.SlotStatus;
 import com.meetingscheduler.shared.domain.InvalidRequestException;

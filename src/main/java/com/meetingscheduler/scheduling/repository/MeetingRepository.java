@@ -1,4 +1,6 @@
-package com.meetingscheduler.scheduling.domain;
+package com.meetingscheduler.scheduling.repository;
+
+import com.meetingscheduler.scheduling.domain.Meeting;
 
 import java.util.Optional;
 

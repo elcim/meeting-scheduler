@@ -1,4 +1,4 @@
-package com.meetingscheduler.scheduling.infrastructure;
+package com.meetingscheduler.scheduling.repository.jpa;
 
 import com.meetingscheduler.scheduling.application.MeetingView;
 import com.meetingscheduler.scheduling.domain.Meeting;

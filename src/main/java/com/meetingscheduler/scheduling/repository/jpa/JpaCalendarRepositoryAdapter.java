@@ -1,7 +1,7 @@
-package com.meetingscheduler.scheduling.infrastructure;
+package com.meetingscheduler.scheduling.repository.jpa;
 
 import com.meetingscheduler.scheduling.domain.Calendar;
-import com.meetingscheduler.scheduling.domain.CalendarRepository;
+import com.meetingscheduler.scheduling.repository.CalendarRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;

@@ -16,22 +16,24 @@ to run against a server database; the migration uses portable SQL.
 ## Architecture
 
 The code is organized by bounded context, and each context by DDD layer. Dependencies point inwards only
-(`api` → `application` → `domain` ← `infrastructure`).
+(`api` → `application` → `domain` ← `infrastructure`). Persistence lives in each context's `repository` package: the
+repository interfaces (ports), their Spring Data interfaces and JPA adapters.
 
 ```
 com.meetingscheduler
 ├── shared          shared kernel: DomainException types, TimeWindow, Page/PageQuery, error handling (RFC 9457)
 ├── user            bounded context: who the users are
-│   ├── domain          User (aggregate), EmailAddress (value object), UserRepository (port), UserRegistered (event)
+│   ├── domain          User (aggregate), EmailAddress (value object), UserRegistered (event)
 │   ├── application     UserService (use cases, transactions), RegisterUserCommand
-│   ├── infrastructure  Spring Data / JPA adapter of UserRepository
+│   ├── repository      UserRepository (port); jpa: Spring Data interface and JPA adapter
 │   └── api             UserController, request/response DTOs
 └── scheduling      bounded context: calendars, slots, meetings, availability
     ├── domain          Calendar, Slot, Meeting (aggregates); SlotPlanner (domain service); Availability, SlotSeries,
-    │                   SlotLimits, MeetingLimits (value objects); repository ports
+    │                   SlotLimits, MeetingLimits (value objects)
     ├── application     SlotService, MeetingService, AvailabilityService; commands; MeetingView + MeetingQueries
     │                   (read model); UserDirectory (port to the user context); CalendarProvisioning (event listener)
-    ├── infrastructure  JPA adapters of the ports, configuration properties, wiring of domain services
+    ├── repository      Calendar/Slot/Meeting repository ports; jpa: Spring Data interfaces and JPA adapters
+    ├── infrastructure  configuration properties, wiring of domain services, UserDirectory adapter
     └── api             Slot/Meeting/Availability controllers and DTOs
 ```
 
@@ -39,7 +41,7 @@ com.meetingscheduler
   object. They guard their own invariants: a `Slot` rejects double booking and refuses to be moved, freed or deleted
   while it holds a meeting; `Slot.bookMeeting` is the only way a `Meeting` comes into existence.
 * **Domain service** `SlotPlanner` owns the rule that spans aggregates (slots of one calendar never overlap).
-* **Repositories** are interfaces in the domain; the Spring Data interfaces and adapters live in `infrastructure`.
+* **Repositories** are interfaces in the `repository` package of each context; the Spring Data interfaces and adapters that implement them are in its `jpa` subpackage.
 * **Contexts talk through events and ports**: registering a user publishes `UserRegistered`, which scheduling
   handles (in the same transaction) by creating the user's calendar; scheduling asks the user context whether users
   exist through its own `UserDirectory` port.
@@ -72,7 +74,8 @@ com.meetingscheduler
 
 ## API
 
-Timestamps are ISO-8601 instants (`2030-01-01T09:00:00Z`). Errors are RFC 9457 problem details
+Timestamps are ISO-8601 instants (`2030-01-01T09:00:00Z`). Paged endpoints take a **zero-based** `page` (default `0`,
+so `page=1` is the second page) and a `size` (default 50, max 200). Errors are RFC 9457 problem details
 (`400` validation, `404` unknown resource, `409` conflict).
 
 | Method & path | Purpose |
@@ -85,7 +88,7 @@ Timestamps are ISO-8601 instants (`2030-01-01T09:00:00Z`). Errors are RFC 9457 p
 | `GET /api/users/{userId}/slots/{slotId}` | Get a slot |
 | `PATCH /api/users/{userId}/slots/{slotId}` | Change `startTime`, `durationMinutes` and/or `status` (`FREE`/`BUSY`) |
 | `DELETE /api/users/{userId}/slots/{slotId}` | Delete a slot |
-| `POST /api/users/{userId}/slots/{slotId}/meeting` | Convert a free slot into a meeting `{title, description?, participantIds}` |
+| `POST /api/users/{userId}/meetings` | Convert a free slot into a meeting `{slotId, title, description?, participantIds}` |
 | `GET /api/users/{userId}/meetings?from&to` | Meetings held in the user's slots |
 | `GET /api/users/{userId}/meetings/participating?from&to` | Meetings the user was invited to |
 | `GET /api/users/{userId}/meetings/{meetingId}` | Get a meeting |

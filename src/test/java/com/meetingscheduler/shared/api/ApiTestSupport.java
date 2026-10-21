@@ -61,10 +61,10 @@ public abstract class ApiTestSupport {
         for (long p : participants) {
             ids.append(ids.isEmpty() ? "" : ",").append(p);
         }
-        return mvc.perform(post("/api/users/{u}/slots/{s}/meeting", userId, slotId)
+        return mvc.perform(post("/api/users/{u}/meetings", userId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"title": "%s", "description": "details", "participantIds": [%s]}""".formatted(title, ids)));
+                        {"slotId": %d, "title": "%s", "description": "details", "participantIds": [%s]}""".formatted(slotId, title, ids)));
     }
 
     protected ResultActions updateMeeting(long userId, long meetingId, String json) throws Exception {

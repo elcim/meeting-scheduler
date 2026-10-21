@@ -1,4 +1,4 @@
-package com.meetingscheduler.user.infrastructure;
+package com.meetingscheduler.user.repository.jpa;
 
 import com.meetingscheduler.user.domain.User;
 import org.springframework.data.jpa.repository.JpaRepository;

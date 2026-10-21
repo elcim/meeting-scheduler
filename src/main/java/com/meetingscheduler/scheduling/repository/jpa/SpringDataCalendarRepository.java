@@ -1,4 +1,4 @@
-package com.meetingscheduler.scheduling.infrastructure;
+package com.meetingscheduler.scheduling.repository.jpa;
 
 import com.meetingscheduler.scheduling.domain.Calendar;
 import jakarta.persistence.LockModeType;

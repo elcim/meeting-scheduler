@@ -1,4 +1,7 @@
-package com.meetingscheduler.user.domain;
+package com.meetingscheduler.user.repository;
+
+import com.meetingscheduler.user.domain.EmailAddress;
+import com.meetingscheduler.user.domain.User;
 
 import java.util.Collection;
 import java.util.Optional;

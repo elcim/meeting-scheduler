@@ -1,4 +1,4 @@
-package com.meetingscheduler.scheduling.infrastructure;
+package com.meetingscheduler.scheduling.repository.jpa;
 
 import com.meetingscheduler.scheduling.domain.Meeting;
 import org.springframework.data.domain.Page;
@@ -23,14 +23,14 @@ interface SpringDataMeetingRepository extends JpaRepository<Meeting, Long> {
     Optional<Meeting> findInCalendar(@Param("id") Long id, @Param("calendarId") Long calendarId);
 
     @Query("""
-            select new com.meetingscheduler.scheduling.infrastructure.MeetingRow(m, s, c.ownerId)
+            select new com.meetingscheduler.scheduling.repository.jpa.MeetingRow(m, s, c.ownerId)
             from Meeting m join Slot s on s.id = m.slotId join Calendar c on c.id = s.calendarId
             where m.id = :id and s.calendarId = :calendarId
             """)
     Optional<MeetingRow> findRowInCalendar(@Param("id") Long id, @Param("calendarId") Long calendarId);
 
     @Query(value = """
-            select new com.meetingscheduler.scheduling.infrastructure.MeetingRow(m, s, c.ownerId)
+            select new com.meetingscheduler.scheduling.repository.jpa.MeetingRow(m, s, c.ownerId)
             from Meeting m join Slot s on s.id = m.slotId join Calendar c on c.id = s.calendarId
             where s.calendarId = :calendarId and s.startTime >= :from and s.startTime < :to
             order by s.startTime, m.id
@@ -45,7 +45,7 @@ interface SpringDataMeetingRepository extends JpaRepository<Meeting, Long> {
                                      Pageable pageable);
 
     @Query(value = """
-            select new com.meetingscheduler.scheduling.infrastructure.MeetingRow(m, s, c.ownerId)
+            select new com.meetingscheduler.scheduling.repository.jpa.MeetingRow(m, s, c.ownerId)
             from Meeting m join Slot s on s.id = m.slotId join Calendar c on c.id = s.calendarId
             where :userId member of m.participantIds and s.startTime >= :from and s.startTime < :to
             order by s.startTime, m.id

@@ -1,7 +1,7 @@
 package com.meetingscheduler.scheduling.infrastructure;
 
 import com.meetingscheduler.scheduling.application.UserDirectory;
-import com.meetingscheduler.user.domain.UserRepository;
+import com.meetingscheduler.user.repository.UserRepository;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;

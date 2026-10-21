@@ -2,9 +2,9 @@ package com.meetingscheduler.scheduling.application;
 
 import com.meetingscheduler.scheduling.domain.Meeting;
 import com.meetingscheduler.scheduling.domain.MeetingLimits;
-import com.meetingscheduler.scheduling.domain.MeetingRepository;
+import com.meetingscheduler.scheduling.repository.MeetingRepository;
 import com.meetingscheduler.scheduling.domain.Slot;
-import com.meetingscheduler.scheduling.domain.SlotRepository;
+import com.meetingscheduler.scheduling.repository.SlotRepository;
 import com.meetingscheduler.shared.domain.InvalidRequestException;
 import com.meetingscheduler.shared.domain.Page;
 import com.meetingscheduler.shared.domain.PageQuery;

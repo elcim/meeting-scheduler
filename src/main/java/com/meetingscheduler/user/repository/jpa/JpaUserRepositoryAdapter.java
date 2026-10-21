@@ -1,8 +1,8 @@
-package com.meetingscheduler.user.infrastructure;
+package com.meetingscheduler.user.repository.jpa;
 
 import com.meetingscheduler.user.domain.EmailAddress;
 import com.meetingscheduler.user.domain.User;
-import com.meetingscheduler.user.domain.UserRepository;
+import com.meetingscheduler.user.repository.UserRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Collection;

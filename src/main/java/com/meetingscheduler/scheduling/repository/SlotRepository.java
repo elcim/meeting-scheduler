@@ -1,5 +1,8 @@
-package com.meetingscheduler.scheduling.domain;
+package com.meetingscheduler.scheduling.repository;
 
+import com.meetingscheduler.scheduling.domain.Slot;
+import com.meetingscheduler.scheduling.domain.SlotSpan;
+import com.meetingscheduler.scheduling.domain.SlotStatus;
 import com.meetingscheduler.shared.domain.Page;
 import com.meetingscheduler.shared.domain.PageQuery;
 import com.meetingscheduler.shared.domain.TimeWindow;

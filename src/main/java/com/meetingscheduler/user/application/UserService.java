@@ -5,7 +5,7 @@ import com.meetingscheduler.shared.domain.ResourceNotFoundException;
 import com.meetingscheduler.user.domain.EmailAddress;
 import com.meetingscheduler.user.domain.User;
 import com.meetingscheduler.user.domain.UserRegistered;
-import com.meetingscheduler.user.domain.UserRepository;
+import com.meetingscheduler.user.repository.UserRepository;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

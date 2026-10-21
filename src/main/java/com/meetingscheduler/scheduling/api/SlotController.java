@@ -2,11 +2,8 @@ package com.meetingscheduler.scheduling.api;
 
 import com.meetingscheduler.scheduling.api.dto.BulkCreateSlotsRequest;
 import com.meetingscheduler.scheduling.api.dto.CreateSlotRequest;
-import com.meetingscheduler.scheduling.api.dto.MeetingRequest;
-import com.meetingscheduler.scheduling.api.dto.MeetingResponse;
 import com.meetingscheduler.scheduling.api.dto.SlotResponse;
 import com.meetingscheduler.scheduling.api.dto.UpdateSlotRequest;
-import com.meetingscheduler.scheduling.application.MeetingService;
 import com.meetingscheduler.scheduling.application.SlotService;
 import com.meetingscheduler.scheduling.domain.SlotStatus;
 import com.meetingscheduler.shared.api.PageResponse;
@@ -39,11 +36,9 @@ import java.util.List;
 public class SlotController {
 
     private final SlotService slotService;
-    private final MeetingService meetingService;
 
-    public SlotController(SlotService slotService, MeetingService meetingService) {
+    public SlotController(SlotService slotService) {
         this.slotService = slotService;
-        this.meetingService = meetingService;
     }
 
     @PostMapping
@@ -87,15 +82,5 @@ public class SlotController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long userId, @PathVariable Long slotId) {
         slotService.delete(userId, slotId);
-    }
-
-    /**
-     * Converts the slot into a meeting.
-     */
-    @PostMapping("/{slotId}/meeting")
-    @ResponseStatus(HttpStatus.CREATED)
-    public MeetingResponse bookMeeting(@PathVariable Long userId, @PathVariable Long slotId,
-                                       @Valid @RequestBody MeetingRequest request) {
-        return MeetingResponse.from(meetingService.book(userId, slotId, request.toDetails()));
     }
 }

@@ -1,5 +1,6 @@
 package com.meetingscheduler.scheduling.domain;
 
+import com.meetingscheduler.scheduling.repository.SlotRepository;
 import com.meetingscheduler.shared.domain.ConflictException;
 import com.meetingscheduler.shared.domain.InvalidRequestException;
 import com.meetingscheduler.shared.domain.TimeWindow;
@@ -10,7 +11,7 @@ import java.util.List;
 /**
  * Domain service enforcing the rule that spans several slots: the slots of one calendar never overlap.
  * <p>
- * Callers must hold the lock of the {@link Calendar} (see {@link CalendarRepository#findByOwnerForUpdate}), otherwise
+ * Callers must hold the lock of the {@link Calendar} (see {@link com.meetingscheduler.scheduling.repository.CalendarRepository#findByOwnerForUpdate}), otherwise
  * concurrent requests could both pass the overlap check.
  */
 public class SlotPlanner {

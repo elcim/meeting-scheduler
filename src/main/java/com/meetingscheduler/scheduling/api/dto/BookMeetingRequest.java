@@ -7,7 +7,8 @@ import jakarta.validation.constraints.Size;
 
 import java.util.Set;
 
-public record MeetingRequest(
+public record BookMeetingRequest(
+        @NotNull Long slotId,
         @NotBlank @Size(max = 200) String title,
         @Size(max = 4000) String description,
         @NotNull Set<Long> participantIds) {

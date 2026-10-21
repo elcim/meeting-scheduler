@@ -1,7 +1,7 @@
 package com.meetingscheduler.scheduling.application;
 
 import com.meetingscheduler.scheduling.domain.Availability;
-import com.meetingscheduler.scheduling.domain.SlotRepository;
+import com.meetingscheduler.scheduling.repository.SlotRepository;
 import com.meetingscheduler.shared.domain.InvalidRequestException;
 import com.meetingscheduler.shared.domain.TimeWindow;
 import org.springframework.stereotype.Service;

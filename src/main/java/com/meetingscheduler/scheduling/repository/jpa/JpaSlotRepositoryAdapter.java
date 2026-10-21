@@ -1,9 +1,9 @@
-package com.meetingscheduler.scheduling.infrastructure;
+package com.meetingscheduler.scheduling.repository.jpa;
 
 import com.meetingscheduler.scheduling.domain.Slot;
-import com.meetingscheduler.scheduling.domain.SlotRepository;
 import com.meetingscheduler.scheduling.domain.SlotSpan;
 import com.meetingscheduler.scheduling.domain.SlotStatus;
+import com.meetingscheduler.scheduling.repository.SlotRepository;
 import com.meetingscheduler.shared.domain.Page;
 import com.meetingscheduler.shared.domain.PageQuery;
 import com.meetingscheduler.shared.domain.TimeWindow;
