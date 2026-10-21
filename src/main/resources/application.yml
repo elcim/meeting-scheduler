@@ -42,6 +42,8 @@ management:
       application: ${spring.application.name}
 
 server:
+  # The port the API listens on; set APP_PORT to change it.
+  port: ${APP_PORT:8080}
   compression:
     enabled: true
   tomcat:

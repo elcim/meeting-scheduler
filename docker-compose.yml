@@ -1,0 +1,50 @@
+# Runs the meeting scheduler together with everything it depends on.
+#
+#   docker-compose up --build        (or: docker compose up --build)
+#   curl http://localhost:8088/actuator/health
+#
+# The application's only external dependency is its database, PostgreSQL. Its data lives in the named volume
+# `postgres-data` and survives `docker-compose down`; use `docker-compose down -v` to start from scratch.
+#
+# Optional overrides (shell environment or a `.env` file next to this file):
+#   APP_PORT        port of the API, inside the container and on the host   (default 8088)
+#   POSTGRES_PORT   host port of PostgreSQL, loopback only (default 5432)
+#   POSTGRES_PASSWORD                                       (default scheduler)
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: scheduler
+      POSTGRES_USER: scheduler
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-scheduler}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scheduler -d scheduler"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  app:
+    build: .
+    image: meeting-scheduler:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Replace the file based H2 database of application.yml; Flyway creates the schema on startup.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/scheduler
+      SPRING_DATASOURCE_USERNAME: scheduler
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-scheduler}
+      # The port the API listens on; it is published under the same number.
+      APP_PORT: ${APP_PORT:-8088}
+    ports:
+      - "${APP_PORT:-8088}:${APP_PORT:-8088}"
+    restart: unless-stopped
+
+volumes:
+  postgres-data:

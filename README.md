@@ -4,15 +4,68 @@ Spring Boot (Java 21) backend for managing time slots, scheduling meetings and v
 
 ## Run
 
+The API listens on http://localhost:8080 by default when run with Maven and on http://localhost:8088 with Docker Compose;
+set `APP_PORT` to use another port (see below). There are two ways to run it: with Maven, which needs Java 21 and Maven and
+uses an embedded database, or with Docker Compose, which needs only Docker and also starts a PostgreSQL database.
+
+### Start and stop
+
+| | Maven (embedded H2 database) | Docker Compose (application and PostgreSQL) |
+|---|---|---|
+| **Start** | `mvn spring-boot:run` | `docker-compose up --build` (add `-d` to run in the background) |
+| **Stop** | `Ctrl+C` in the terminal it runs in | `Ctrl+C`, or `docker-compose down` when started with `-d` |
+| **Stop and delete the data** | delete the `./data` directory | `docker-compose down -v` |
+| **Check that it is up** | `curl http://localhost:8080/actuator/health` | `curl http://localhost:8088/actuator/health` |
+| **Another port** | `APP_PORT=8090 mvn spring-boot:run` | `APP_PORT=8090 docker-compose up --build` |
+
+Both can be run with `docker compose` (without the hyphen) if your Docker has the Compose plugin.
+
+If the application runs in the background (for example `mvn spring-boot:run &`), find it with `lsof -ti :8080` and
+stop it with `kill <pid>`. If port 8080 is taken, start the application on another port with `APP_PORT`, as in the
+table. Restart the application after changing the code, because a running instance does not pick up changes.
+
+Other useful commands:
+
 ```bash
-mvn spring-boot:run     # http://localhost:8080
-mvn test
+mvn test                # run the tests (in-memory database, independent of a running instance)
 mvn javadoc:javadoc     # API documentation of the code
 ```
 
-Data is persisted to a file based H2 database in `./data`; the schema is managed by Flyway
-(`src/main/resources/db/migration`). Point `spring.datasource.*` at another database (and add its driver)
-to run against a server database; the migration uses portable SQL.
+### Database
+
+By default data is persisted to a file based H2 database in `./data`; the schema is managed by Flyway
+(`src/main/resources/db/migration`). The migration uses portable SQL, so the application also runs against a server
+database: the PostgreSQL driver is included, and `spring.datasource.*` selects the database. Docker Compose does that
+for you, as described next.
+
+### Run with Docker Compose
+
+`docker-compose.yml` starts the application together with its only external dependency, a PostgreSQL database, so
+nothing but Docker is needed. Its data lives in the named volume `postgres-data` and survives `docker-compose down`.
+
+```bash
+docker-compose up --build          # build the image and start both containers
+curl http://localhost:8088/actuator/health
+docker-compose logs -f app         # follow the application log
+docker-compose down                # stop; the data stays in the volume
+docker-compose down -v             # stop and delete the data
+```
+
+| Service | Image | Purpose |
+|---|---|---|
+| `app` | built from the `Dockerfile` (Maven build, then a JRE-only image running as an unprivileged user) | The API on http://localhost:8088 |
+| `postgres` | `postgres:17-alpine` | Database; Flyway creates the schema when the application starts |
+
+`app` waits until `postgres` is healthy before it starts, and both containers have health checks and restart
+automatically. The compose file overrides `spring.datasource.*` through environment variables, so the same image can
+run against any PostgreSQL database. These optional variables change the defaults. Set them in the shell or copy
+`.env.example` to `.env`, which docker-compose reads automatically (and git ignores):
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `APP_PORT` | `8088` (`8080` with Maven) | Port of the API: the application listens on it, inside the container too, and it is published under the same number on the host |
+| `POSTGRES_PORT` | `5432` | Host port of PostgreSQL (bound to `127.0.0.1` only, for inspecting the data) |
+| `POSTGRES_PASSWORD` | `scheduler` | Password of the database user; change it outside local development |
 
 ## Architecture
 
@@ -145,7 +198,7 @@ Timestamps are ISO-8601 instants (`2030-01-01T09:00:00Z`). Paged endpoints take 
 so `page=1` is the second page) and a `size` (default 50, max 200). Errors are RFC 9457 problem details
 (`400` validation, `404` unknown resource, `409` conflict).
 
-The examples assume the application runs on `localhost:8080` and that users `1` and `2` exist, user `1` having the slots and meeting they refer to.
+The examples assume the application runs on `localhost:8080` (use `8088` with Docker Compose) and that users `1` and `2` exist, user `1` having the slots and meeting they refer to.
 
 | Method & path | Purpose | curl |
 |---|---|---|
